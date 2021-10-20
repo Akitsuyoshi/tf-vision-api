@@ -1,4 +1,240 @@
-# Object detection in an Urban Environment
+## Object detection in an Urban Environment
+
+[//]: # (Image References)
+
+[image0]: ./examples/run1.gif "Expected output"
+[image1]: ./examples/hist1.png "Histogram"
+[image2]: ./examples/hist2.png "Histogram2"
+[image3]: ./examples/vgg16.png "VGG16"
+[image4]: ./examples/vgg16_mark.png "VGG16 Marked"
+[image5]: ./examples/hist3.png "Histogram3"
+[image6]: ./examples/augmentation.png "Augmentation"
+[image7]: ./examples/angles.png "3Angles"
+[image8]: ./examples/model_1.png "Model"
+
+---
+
+## Overview
+
+In this project, we built supervised deep learning algorithm in Waymo open dataset using tensorflow object detection api. The goal is to make bounding boxs predictions for three objects, cyclists, pedestrians and vehicles in images of urban environments. To deal with that, this project includes data analysis, monitoring model performance, and deployment model for inferencing in video as well. The object detection is one of the most important task to self-driving cars, which lead them to sense surrouding environments and navigate through obstacles. 
+
+---
+
+## Table of Contents
+
+- [Object detection in an Urban Environment](#object-detection-in-an-urban-environment)
+- [Overview](#overview)
+- [Table of Contents](#table-of-contents)
+- [Structure](#structure)
+- [Getting Started](#getting-started)
+  - [Requirements](#requirements)
+  - [(Optional)Connect to remote host](#optionalconnect-to-remote-host)
+  - [Build](#build)
+  - [Install gstuil](#install-gstuil)
+- [Development](#development)
+  - [Stop remote server(ec2):](#stop-remote-serverec2)
+  - [SSH into running docker container:](#ssh-into-running-docker-container)
+  - [Open jupyter notebook:](#open-jupyter-notebook)
+  - [Make a new config file](#make-a-new-config-file)
+  - [Train the model:](#train-the-model)
+  - [Evaluate the model:](#evaluate-the-model)
+  - [Monitor trainig/evaluation perfomance:](#monitor-trainigevaluation-perfomance)
+- [Dataset](#dataset)
+  - [Dataset analysis](#dataset-analysis)
+  - [Cross validation](#cross-validation)
+- [Training](#training)
+  - [Reference experiment](#reference-experiment)
+- [### Improve on the reference](#-improve-on-the-reference)
+- [## Summary](#-summary)
+- [Discussion](#discussion)
+  - [Problems during my implementation](#problems-during-my-implementation)
+  - [Possible improvements](#possible-improvements)
+  - [Future Feature](#future-feature)
+- [References](#references)
+- [Author](#author)
+- [Data](#data)
+- [Structure](#structure-1)
+- [Prerequisites](#prerequisites)
+  - [Local Setup](#local-setup)
+  - [Classroom Workspace](#classroom-workspace)
+- [Instructions](#instructions)
+  - [Download and process the data](#download-and-process-the-data)
+  - [Exploratory Data Analysis](#exploratory-data-analysis)
+  - [Create the splits](#create-the-splits)
+  - [Edit the config file](#edit-the-config-file)
+  - [Training](#training-1)
+  - [Improve the performances](#improve-the-performances)
+  - [Creating an animation](#creating-an-animation)
+    - [Export the trained model](#export-the-trained-model)
+- [Submission Template](#submission-template)
+  - [Project overview](#project-overview)
+  - [Set up](#set-up)
+  - [Dataset](#dataset-1)
+    - [Dataset analysis](#dataset-analysis-1)
+    - [Cross validation](#cross-validation-1)
+  - [Training](#training-2)
+    - [Reference experiment](#reference-experiment-1)
+    - [Improve on the reference](#improve-on-the-reference)
+
+---
+
+## Structure
+
+---
+
+## Getting Started
+
+### Requirements
+
+- [Server with GPU](https://course.fast.ai/start_aws#pricing)
+- NVIDIA GPU with the latest driver installed
+- [docker / nvidia-docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) / [tensorflow-docker](https://www.tensorflow.org/install/docker)
+
+The detailed instruction to make remote ec2 server with GPU in [fast ai site](https://course.fast.ai/start_aws)
+
+The environment example by running `nvidia-smi`
+```sh
+| NVIDIA-SMI 460.91.03    Driver Version: 460.91.03    CUDA Version: 11.2     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Tesla T4            Off  | 00000000:00:1E.0 Off |                    0 |
+| N/A   31C    P0    25W /  70W |      0MiB / 15109MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+```
+
+### (Optional)Connect to remote host
+
+```sh
+ssh -L 8000:localhost:8000 -L 6006:localhost:6006 ubuntu@{your-IP}
+```
+It opens two port, 8000 for remote host and docker, 6006 for tenosorboard.
+
+### Build
+
+After you obtain this repo, build the image with:
+```sh
+# Once in build folder
+docker build -t project-dev -f Dockerfile .
+```
+Create a container with:
+```sh
+docker run --shm-size=8gb -p 8000:8000 -p 6006:6006 —gpu all -v /home/ubuntu/nd013-c1-vision-starter:/app/project/ -ti project-dev bash
+```
+`--shm-size` value 8gb can be changed according to your server memory. If you have error when using `—gpu`, you might have wrong docker. You can seach official installation way in this [page](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker)
+
+### Install gstuil
+
+Once in container, you need to get gustil for accessing cloud storage:
+```sh
+curl https://sdk.cloud.google.com | bash
+```
+Auth gcloud:
+```sh
+gcloud auth login
+```
+
+The official gustil setup can be found [here](https://cloud.google.com/storage/docs/gsutil)
+
+---
+## Development
+
+### Stop remote server(ec2):
+```sh
+# Outside container
+sudo shutdown -h now
+```
+
+### SSH into running docker container:
+```sh
+# Outside container
+docker ps
+docker exec -i -t {CONTAINER_ID} /bin/bash
+```
+### Open jupyter notebook:
+```sh
+# In container
+cd project
+jupyter notebook --port 8000 --ip=0.0.0.0 --allow-root
+```
+### Make a new config file
+```sh
+# In container
+cd project
+python edit_config.py --train_dir /app/project/data/waymo/train/ --eval_dir /app/project/data/waymo/val/ --batch_size 4 --checkpoint ./training/pretrained-models/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8/checkpoint/ckpt-0 --label_map label_map.pbtxt
+```
+### Train the model:
+```sh
+# In container
+cd project
+python experiments/model_main_tf2.py --model_dir=training/reference/ --pipeline_config_path=training/reference/pipeline_new.config
+```
+### Evaluate the model:
+```sh
+# In container
+cd project
+CUDA_VISIBLE_DEVICES="" python experiments/model_main_tf2.py --model_dir=training/reference/ --pipeline_config_path=training/reference/pipeline_new.config --checkpoint_dir=training/reference/
+```
+### Monitor trainig/evaluation perfomance:
+```sh
+# In container, connecting to localhost:6006
+tensorboard --logdir=training/reference/ --host=0.0.0.0
+```
+If you'll see GPU usage to make sure that gpu is used when training:
+```sh
+# Outside container
+nvidia-smi
+# Or
+nvtop
+```
+
+---
+
+## Dataset
+### Dataset analysis
+### Cross validation
+
+---
+
+## Training
+### Reference experiment
+### Improve on the reference
+---
+
+## Summary
+---
+
+## Discussion
+
+### Problems during my implementation
+
+### Possible improvements
+
+### Future Feature
+  
+---
+
+## References
+
+- [Tensorflow2 Object Detction API tutorial](https://tensorflow-object-detection-api-tutorial.readthedocs.io/en/latest/training.html#training-custom-object-detector)
+
+---
+
+## Author
+
+- [Tsuyoshi Akiyama](https://github.com/Akitsuyoshi)
+
 
 ## Data
 
