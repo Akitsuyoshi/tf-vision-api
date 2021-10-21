@@ -140,7 +140,8 @@ docker build -t project-dev -f build/Dockerfile .
 
 # 6. Create a container with above image
 # you can change --shm-size according to your server memory
-docker run --shm-size=8gb -p 8000:8000 -p 6006:6006 —gpu all -v /home/ubuntu/nd013-c1-vision-starter:/app/project/ -ti project-dev bash
+docker run —-gpus all --shm-size=8gb -p 8000:8000 -p 6006:6006 -v /home/ubuntu/nd013-c1-vision-starter:/app/project/ -ti project-dev bash
+
 
 # 7. Install gstuil
 curl https://sdk.cloud.google.com | bash
@@ -171,7 +172,7 @@ nvtop
 Inside container, you can open jupyter notebook, make a new config for tf object detection api, train/evaluate model, and monitor them.
 ```sh
 # Run a container
-docker run --shm-size=8gb -p 8000:8000 -p 6006:6006 —gpu all -v /home/ubuntu/nd013-c1-vision-starter:/app/project/ -ti project-dev bash
+docker run —-gpus all --shm-size=8gb -p 8000:8000 -p 6006:6006 -v /home/ubuntu/nd013-c1-vision-starter:/app/project/ -ti project-dev bash
 
 # Once in container
 cd project
@@ -253,6 +254,7 @@ This section should highlight the different strategies you adopted to improve yo
 ## References
 
 - [Tensorflow2 Object Detction API tutorial](https://tensorflow-object-detection-api-tutorial.readthedocs.io/en/latest/training.html#training-custom-object-detector)
+- [Tensorflow Dataset tutorial in CS230](https://cs230.stanford.edu/blog/datapipeline/)
 
 ---
 
